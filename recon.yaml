@@ -1,0 +1,222 @@
+name: Workflow by aldenpartridge
+author: aldenpartridge
+description: "Comprehensive bug bounty reconnaissance and vulnerability scanning workflow"
+variables:
+  OUTPUT_DIR: "{{TARGET}}"
+  THREADS: "50"
+  WORDLIST: "~/Wordlists/Seclists/Discovery/DNS/dns-Jhaddix.txt"
+  XSS_FILE: "~/Wordlists/Payloads/bxss.txt"
+
+steps:
+  - name: "Creating Output Directory"
+    continue_on_error: true
+    command: "mkdir -p {{OUTPUT_DIR}}"
+
+  - name: "Creating Asset Directory"
+    continue_on_error: true
+    command: "mkdir -p {{OUTPUT_DIR}}/assets/"
+
+  - name: "Creating Findings Directory"
+    continue_on_error: true
+    command: "mkdir -p {{OUTPUT_DIR}}/findings/"
+
+  - name: "Updating Wpprobe"
+    continue_on_error: true
+    command: "wpprobe update"
+
+  - name: "Updating the Wpprobe Database"
+    continue_on_error: true
+    command: "wpprobe update db"
+
+  - name: "Updating Nuclei"
+    continue_on_error: true
+    command: "nuclei -up"
+
+  - name: "Updating Nuclei Templates"
+    continue_on_error: true
+    command: "nuclei -ut"
+
+  - name: "Updating Subfinder"
+    continue_on_error: true
+    command: "subfinder -up"
+
+  - name: "Updating Katana"
+    continue_on_error: true
+    command: "katana -up"
+
+  - name: "Updating HTTPX"
+    continue_on_error: true
+    command: "httpx -up"
+
+  - name: "Updating DNSX"
+    continue_on_error: true
+    command: "dnsx -up"
+
+    #Subdomain Enumeration & Asset Discovery
+  - name: "Enumerating subdomains with Subfinder"
+    continue_on_error: true
+    command: "subfinder -d {{TARGET}} -all -recursive -o {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Enumerating subdomains with assetfinder"
+    continue_on_error: true
+    command: "assetfinder --subs-only {{TARGET}} | anew {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Enumerating subdomains with Sublist3r"
+    continue_on_error: true
+    command: "sublist3r -d {{TARGET}} -o {{OUTPUT_DIR}}/assets/sublister.txt && cat {{OUTPUT_DIR}}/assets/sublister.txt | anew {{OUTPUT_DIR}}/assets/subdomains.txt && rm -rf {{OUTPUT_DIR}}/assets/sublister.txt"
+
+  - name: "Enumerating subdomains with Puredns"
+    continue_on_error: true
+    command: "puredns bruteforce ~/wordlists/subdomains.txt {{TARGET}} | anew {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Enumerating HTTPS-based subdomains with Ffuf"
+    continue_on_error: true
+    command: "ffuf -s -u https://FUZZ.{{TARGET}} -w ~/wordlists/subdomains.txt | tee {{OUTPUT_DIR}}/assets/tmp.txt"
+
+  - name: "Cleaning up..."
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/tmp.txt | sed 's/$/.{{TARGET}}/' | anew {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Cleaning up..."
+    continue_on_error: true
+    command: "rm -rf {{OUTPUT_DIR}}/assets/tmp.txt"
+
+  - name: "Enumerating HTTP-based subdomains with Ffuf"
+    continue_on_error: true
+    command: "ffuf -s -u http://FUZZ.{{TARGET}} -w ~/wordlists/subdomains.txt | tee {{OUTPUT_DIR}}/assets/tmp.txt"
+
+  - name: "Cleaning up..."
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/tmp.txt | sed 's/$/.{{TARGET}}/' | anew {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Cleaning up..."
+    continue_on_error: true
+    command: "rm -rf {{OUTPUT_DIR}}/assets/tmp.txt"
+
+  - name: "Enumerating subdomains with mgwls and dnsx"
+    continue_on_error: true
+    command: "mgwls -l ~/wordlists/subdomains.txt -w .{{TARGET}} -side right | dnsx | anew {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Cleaning up..."
+    continue_on_error: true
+    command: "tr '[:upper:]' '[:lower:]' < {{OUTPUT_DIR}}/assets/subdomains.txt | urldedupe | tee {{OUTPUT_DIR}}/assets/subdomains.txt"
+   
+  - name: "Filtering live subdomains"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/subdomains.txt | httpx -ports 80,443,8080,8000,8888 -threads 200 | sed 's/:.*//' > {{OUTPUT_DIR}}/assets/subdomains_alive.txt"
+ 
+  # - name: "Checking Shodan for SSL"
+  #   continue_on_error: true
+  #   command: "shef.sh -q Ssl.cert.subject.CN:'{{TARGET}}' 200 | httpx 200 | tee {{OUTPUT_DIR}}/assets/shodan_ssl.txt"
+    #Endpoint Extraction
+  - name: "Finding JS endpoints - part 1"
+    continue_on_error: true
+    command: "katana -list {{OUTPUT_DIR}}/assets/subdomains_alive.txt -d 7 -jc | grep '\\.js$' | tee {{OUTPUT_DIR}}/assets/alljs.txt"
+    
+  - name: "Finding JS endpoints - part 2"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/subdomains_alive.txt | gau | grep '\\.js$' | anew {{OUTPUT_DIR}}/assets/alljs.txt"
+
+  - name: "Extracting JS Endpoints"  
+    continue_on_error: true
+    command: "xnLinkFinder -i {{OUTPUT_DIR}}/assets/alljs.txt -sf {{TARGET}} -o {{OUTPUT_DIR}}/assets/js_endpoints.txt"
+
+  - name: "Finding PHP endpoints"
+    continue_on_error: true
+    command: "katana -list {{OUTPUT_DIR}}/assets/subdomains_alive.txt -d 7 -em php | tee {{OUTPUT_DIR}}/assets/php_endpoints.txt"
+    #Parameter Extraction
+  # - name: "Finding hidden parameters - part 1"
+  #   continue_on_error: true
+  #   command: "arjun -i {{OUTPUT_DIR}}/assets/php_endpoints.txt -o {{OUTPUT_DIR}}/findings/arjun_output.txt -t 10 --rate-limit 10 --passive -m GET,POST --headers 'User-Agent: Mozilla/5.0'"
+    
+  # - name: "Finding hidden parameters - part 2"
+  #   continue_on_error: true
+  #   command: "arjun -i {{OUTPUT_DIR}}/assets/php_endpoints.txt -o {{OUTPUT_DIR}}/arjun_output2.txt -m GET,POST -w ~/wordlists/Seclists/Discovery/Web-Content/burp-parameter-names.txt -t 10 --rate-limit 10 --headers 'User-Agent: Mozilla/5.0'"
+
+  - name: "Generating Custom Wordlist"
+    continue_on_error: true
+    command: "katana -u {{TARGET}} -d 7 | tr '[:punct:]' '\n' | sort -u | tee {{OUTPUT_DIR}}/customwordlist.txt"
+   #URL and File Extraction
+  - name: "Fetching passive urls"
+    continue_on_error: true
+    command: "katana -u {{OUTPUT_DIR}}/assets/subdomains_alive.txt -d 7 -kf -jc -fx -ef woff,css,png,svg,jpg,woff2,jpeg,gif,svg | tee {{OUTPUT_DIR}}/assets/allurls.txt"
+    
+  - name: "Finding sensitive files"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/allurls.txt | grep -E '\\.xls|\\.xml|\\.xlsx|\\.json|\\.pdf|\\.sql|\\.doc|\\.docx|\\.pptx|\\.txt|\\.zip|\\.tar\\.gz|\\.tgz|\\.bak|\\.7z|\\.rar|\\.log|\\.cache|\\.secret|\\.db|\\.backup|\\.yml|\\.gz|\\.config|\\.csv|\\.yaml|\\.md|\\.md5' > {{OUTPUT_DIR}}/findings/sensitivefiles.txt"
+
+  - name: "Fetching and sorting urls - part 1"
+    continue_on_error: true
+    command: "echo {{TARGET}} | katana -d 7 -f qurl | urldedupe | tee {{OUTPUT_DIR}}/assets/sortedurls.txt"
+    
+  - name: "Fetching and sorting urls - part 2"
+    continue_on_error: true
+    command: "katana -u {{TARGET}} -d 7 | grep '=' | urldedupe | anew {{OUTPUT_DIR}}/assets/sortedurls.txt"
+    
+  - name: "Fetching and sorting urls - part 3"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/sortedurls.txt | sed 's/=.*/=/' > {{OUTPUT_DIR}}/assets/final.txt"
+    
+  - name: "Fetching and sorting urls - part 4"
+    continue_on_error: true
+    command: "echo {{TARGET}} | gau --mc 200 | urldedupe | tee {{OUTPUT_DIR}}/assets/urls.txt"
+    
+  - name: "Fetching and sorting urls - part 5"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/urls.txt | grep -E '.php|.asp|.aspx|.jspx|.jsp' | grep '=' | sort > {{OUTPUT_DIR}}/assets/sort2.txt"
+    
+  - name: "Fetching and sorting urls - part 6"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/sort2.txt | sed 's/=.*/=/' > {{OUTPUT_DIR}}/assets/final2.txt"
+
+  - name: "Finding Wordpress URLs"
+    continue_on_error: true
+    command: "katana -list {{OUTPUT_DIR}}/assets/subdomains_alive.txt -mr wp- -f rurl | urldedupe | tee {{OUTPUT_DIR}}/assets/wordpress.txt"
+    #Wordpress Vulnerabilities
+  - name: "Finding Wordpress Vulnerabilities"
+    continue_on_error: true
+    command: "wpprobe scan --file {{OUTPUT_DIR}}/assets/wordpress.txt -o {{OUTPUT_DIR}}/findings/wpprobe.json"
+    #LFI Vulnerabilities
+  - name: "Checking for LFI (might take a while)"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/subdomains_alive.txt | gau | gf lfi | uro | sed 's/=.*/=/' | qsreplace 'FUZZ' | sort -u | xargs -I{} ffuf -u {} -w ~/wordlists/payloads/lfi.txt -c -mr 'root:(x|\\*|\\$[^\\:]*):0:0:' -v -o {{OUTPUT_DIR}}/findings/ffuf.txt"
+    #Directory Fuzzing
+  - name: "Bruteforcing Directories"
+    continue_on_error: true
+    command: "dirsearch -l {{OUTPUT_DIR}}/assets/subdomains_alive.txt -e php,cgi,htm,html,shtm,shtml,js,txt,bak,zip,old,conf,log,pl,asp,aspx,jsp,sql,db,sqlite,mdb,tar,gz,7z,rar,json,xml,yml,yaml,ini,java,py,rb,php3,php4,php5 --random-agent --recursive -R 3 -t 20 --exclude-status=404 --follow-redirects --delay=0.1 -o {{OUTPUT_DIR}}/assets/directories.txt --output-formats=simple"
+    #Secret Scanning
+  - name: "Scanning JS Files for Secrets"
+    continue_on_error: true
+    command: "cat {{OUTPUT_DIR}}/assets/alljs.txt | nuclei -t ~/nuclei-templates/http/exposures/ -o {{OUTPUT_DIR}}/findings/js_secrets.txt"
+    #Subdomain Takeover
+  - name: "Checking for Subdomain Takeover"
+    continue_on_error: true
+    command: "subzy run --targets {{OUTPUT_DIR}}/assets/subdomains.txt --concurrency 100 --hide_fails --verify_ssl --vuln -o {{OUTPUT_DIR}}/findings/takeovers.json"
+    #XSS
+  - name: "Checking for Blind XSS"
+    continue_on_error: true
+    command: "subfinder -d {{TARGET}} | gau | grep '&' | bxss -appendMode -payloadFile {{XSS_FILE}} -parameters | tee {{OUTPUT_DIR}}/findings/bxss.txt"
+    #Generic CVE
+  - name: "Checking for CVE's"
+    continue_on_error: true
+    command: "nuclei -list {{OUTPUT_DIR}}/assets/shodan_ssl.txt -tags cve -o {{OUTPUT_DIR}}/findings/cve.txt"
+    
+  - name: "Running NMAP Scan"
+    continue_on_error: true
+    command: "nmap -sV -sC -iL {{OUTPUT_DIR}}/assets/shodan_ssl.txt | tee {{OUTPUT_DIR}}/assets/nmap.txt"
+    #SQL Injection
+  - name: "Discovering potential SQLI parameters"
+    continue_on_error: true
+    command: "xargs -I{} bash -c 'url={}; [[ $url =~ ^https?:// ]] || url=\"http://$url\"; gau \"$url\" | uro | grep -E \"\\.php|\\.asp|\\.aspx|\\.jspx|\\.jsp\" | grep \"=\" | tee {{OUTPUT_DIR}}/assets/sql_parameters.txt' < {{OUTPUT_DIR}}/assets/subdomains_alive.txt"
+  
+  - name: "Checking Subdomains for SQLI"
+    continue_on_error: true
+    command: "lostfuzzer.sh {{OUTPUT_DIR}}/assets/subdomains.txt"
+
+  - name: "Checking Subdomains for SQLI - part 2"
+    continue_on_error: true
+    command: "subfinder -d {{TARGET}} -all -silent | gau --threads 50 | uro | gf sqli | tee {{OUTPUT_DIR}}/findings/sqli.txt; ghauri -m {{OUTPUT_DIR}}/findings/sqli.txt --batch --dbs --level 3 --confirm | tee {{OUTPUT_DIR}}/findings/ghauri_output.txt"
+    #CSRF
+  # - name: "Checking Subdomains for CSRF"
+  #   continue_on_error: true
+  #   command: "while IFS= read -r url; do xsrfprobe -u \"$url\" --crawl -o \"{{OUTPUT_DIR}}/csrf/$(echo \"$url\" | tr '/:' '_')\"; done < {{OUTPUT_DIR}}/assets/subdomains.txt"
