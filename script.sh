@@ -21,10 +21,10 @@ elif [ "$OS" == "arch" ]; then
     echo "Updating system on Arch Linux..."
     sudo pacman -Syu --noconfirm
 
-    mkdir ~/Tools
-    mkdir ~/Wordlists
-    mkdir ~/Wordlists/Payloads
-    mkdir ~/Bounty
+    mkdir ~/tools
+    mkdir ~/wordlists
+    mkdir ~/wordlists/payloads
+    mkdir ~/bounty
     mkdir ~/.gf
     mkdir ~/.config/puredns
     mkdir ~/nuclei-templates
@@ -40,10 +40,12 @@ elif [ "$OS" == "arch" ]; then
     wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz
     sudo rm -rf /usr/local/go
     sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz
+    
+    echo "Installing Rust..."
+    yay -S rust --noconfirm
+    yay -S rustup --noconfirm
 
-    yay -S rust
-    yay -S rustup
-
+    echo "Adding cargo binary to PATH..."
     echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
     source ~/.bashrc
 
@@ -65,7 +67,54 @@ elif [ "$OS" == "arch" ]; then
     # Source the bashrc to update the PATH in the current session
     source ~/.bashrc
 
-    echo "Installing tools..."
+    echo "Installing general packages..."
+
+    echo "Installing Brave Browser..."
+    yay -S brave-bin --noconfirm
+
+    echo "Installing Docker..."
+    yay -S docker --noconfirm
+    yay -S docker-compose --noconfirm
+
+    echo "Installing fzf..."
+    yay -S fzf --noconfirm
+
+    echo "Installing btop..."
+    yay -S btop --noconfirm
+
+    echo "Installing jq..."
+    yay -S jq --noconfirm
+
+    echo "Installing keepassxc..."
+    yay -S keepassxc --noconfirm
+
+    echo "Installing less..."
+    yay -S less --noconfirm
+
+    echo "Installing Mullvad VPN..."
+    yay -S mullvad-vpn --noconfirm
+
+    echo "Installing OBS..."
+    yay -S obs-studio --noconfirm
+
+    echo "Installing Obsidian..."
+    yay -S obsidian --noconfirm
+
+    echo "Installing Netcat..."
+    yay -S openbsd-netcat --noconfirm
+
+    echo "Installing ripgrep..."
+    sudo pacman -S ripgrep --noconfirm
+
+    echo "Installing Signal..."
+    sudo pacman -S signal-desktop --noconfirm
+
+    echo "Installing Spotify..."
+    yay -S spotify --noconfirm
+
+
+
+    echo "Installing bounty tools..."
     go install github.com/projectdiscovery/katana/cmd/katana@latest
     sudo ln -fs ~/go/bin/katana /usr/bin/katana
 
@@ -117,8 +166,8 @@ elif [ "$OS" == "arch" ]; then
 
     sudo yay -S cmake --noconfirm
 
-    git clone https://github.com/ameenmaali/urldedupe.git ~/Tools/urldedupe
-    cd ~/Tools/urldedupe
+    git clone https://github.com/ameenmaali/urldedupe.git ~/tools/urldedupe
+    cd ~/tools/urldedupe
     cmake CMakeLists.txt
     make
     sudo chmod +x urldedupe
@@ -144,9 +193,9 @@ elif [ "$OS" == "arch" ]; then
 
     sudo yay -S nmap --noconfirm
 
-    git clone https://github.com/aldenpartridge/lostfuzzer.git ~/Tools/lostfuzzer
-    sudo chmod +x ~/Tools/lostfuzzer/lostfuzzer.sh
-    sudo ln -fs ~/Tools/lostfuzzer/lostfuzzer.sh /usr/bin/lostfuzzer
+    git clone https://github.com/aldenpartridge/lostfuzzer.git ~/tools/lostfuzzer
+    sudo chmod +x ~/tools/lostfuzzer/lostfuzzer.sh
+    sudo ln -fs ~/tools/lostfuzzer/lostfuzzer.sh /usr/bin/lostfuzzer
 
     pipx install "git+https://github.com/r0oth3x49/ghauri.git"
 
@@ -160,9 +209,9 @@ elif [ "$OS" == "arch" ]; then
 
     pipx install bbot
 
-    git clone https://github.com/danielmiessler/SecLists.git ~/Wordlists/SecLists
+    git clone https://github.com/danielmiessler/SecLists.git ~/wordlists/SecLists
     wget https://raw.githubusercontent.com/trickest/resolvers/refs/heads/main/resolvers.txt && mv resolvers.txt ~/.config/puredns/
-    echo "'\"<script src=https://xss.report/c/manwithafish></script>" > ~/Wordlists/Payloads/bxss.txt
+    echo "'\"<script src=https://xss.report/c/manwithafish></script>" > ~/wordlists/payloads/bxss.txt
     
     pipx install waymore
 
@@ -170,7 +219,7 @@ elif [ "$OS" == "arch" ]; then
 
     wget https://raw.githubusercontent.com/MrRockettt/Rocket-Crawl/refs/heads/main/rocket-crawl.sh
     chmod +x rocket-crawl.sh
-    mv rocket-crawl.sh ~/Tools/
+    mv rocket-crawl.sh ~/tools/
 
     go install github.com/OJ/gobuster/v3@latest
 
@@ -183,10 +232,23 @@ elif [ "$OS" == "arch" ]; then
     cargo install x8
 
     wget https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/chaos-programs.sh
-    mv chaos-programs.sh ~/Tools
+    mv chaos-programs.sh ~/tools
 
-    git clone https://github.com/zabesec/bb.git
-    mv bb ~/Tools
+    git clone https://github.com/zabesec/bb.git ~/tools
+
+    yay -S aquatone-bin --noconfirm
+
+    yay -S binwalk --noconfirm
+
+    yay -S findomain --noconfirm
+
+    yay -S ghidra-desktop --noconfirm
+
+    yay -S hashcat --noconfirm
+
+    yay -S massdns --noconfirm
+
+    yay -S radare2 --noconfirm
 
     echo "Installation complete on Arch Linux."
 
