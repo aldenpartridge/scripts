@@ -37,9 +37,16 @@ elif [ "$OS" == "arch" ]; then
     makepkg -si
 
     echo "Installing Go..."
-    wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+    wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz
     sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz
+
+    yay -S rust
+    yay -S rustup
+
+    echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+
 
     echo "Installing Python 3..."
     sudo yay -S python312 --noconfirm
@@ -157,8 +164,30 @@ elif [ "$OS" == "arch" ]; then
     wget https://raw.githubusercontent.com/trickest/resolvers/refs/heads/main/resolvers.txt && mv resolvers.txt ~/.config/puredns/
     echo "'\"<script src=https://xss.report/c/manwithafish></script>" > ~/Wordlists/Payloads/bxss.txt
     
+    pipx install waymore
 
-    
+    GO111MODULE=on go install github.com/jaeles-project/gospider@latest
+
+    wget https://raw.githubusercontent.com/MrRockettt/Rocket-Crawl/refs/heads/main/rocket-crawl.sh
+    chmod +x rocket-crawl.sh
+    mv rocket-crawl.sh ~/Tools/
+
+    go install github.com/OJ/gobuster/v3@latest
+
+    go install github.com/hahwul/dalfox/v2@latest
+
+    go install github.com/1hehaq/recx@latest
+
+    go install github.com/1hehaq/shef@latest
+
+    cargo install x8
+
+    wget https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/chaos-programs.sh
+    mv chaos-programs.sh ~/Tools
+
+    git clone https://github.com/zabesec/bb.git
+    mv bb ~/Tools
+
     echo "Installation complete on Arch Linux."
 
 elif [ "$OS" == "windows" ]; then
