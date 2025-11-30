@@ -70,7 +70,7 @@ elif [ "$OS" == "arch" ]; then
 
     # Setup Python
     log "Setting up Python environment..."
-    python3 -m pip install --upgrade pip setuptools wheel
+    # python3 -m pip install --upgrade pip setuptools wheel
     pipx ensurepath
     sudo pipx ensurepath --global
 
