@@ -47,7 +47,7 @@ elif [ "$OS" == "arch" ]; then
     # Install core development tools in batch
     log "Installing core development packages..."
     sudo pacman -S --needed --noconfirm \
-        python3 python-pip rust rustup python-pipx python-setuptools cmake docker docker-compose \
+        python3 python-pip rustup python-pipx python-setuptools cmake docker docker-compose \
         flatpak wget ripgrep jq nmap btop fzf llvm openbsd-netcat base-devel \
         tor yubikey-personalization libfido2 yubikey-manager \
         binwalk findomain radare2 hashcat ghidra git go stow \
@@ -58,19 +58,9 @@ elif [ "$OS" == "arch" ]; then
     log "Installing Rust..."
     rustup default stable
 
-    # Install Paru AUR helper (prefer official repo, fallback to build)
-    log "Installing Paru AUR helper..."
-    if pacman -Si paru &>/dev/null; then
-        # Try official repository first (newer Arch versions)
-        sudo pacman -S --needed --noconfirm paru || \
-            warn "Failed to install paru from official repo"
-    else
-        # Fallback to building from source in temp directory
-        mkdir -p /tmp/paru-build && cd /tmp/paru-build
-        git clone https://aur.archlinux.org/paru.git
-        makepkg -si --noconfirm && cd ~ && rm -rf /tmp/paru-build || \
-            error "Failed to build and install paru"
-    fi
+    git clone https://aur.archlinux.org/yay.git
+    cd yay
+    makepkg -si   
 
     # Enable services
     log "Enabling services..."
@@ -104,14 +94,14 @@ elif [ "$OS" == "arch" ]; then
     flatpak install -y flathub com.brave.Browser com.vscodium.codium dev.vencord.Vesktop com.github.KRTirtho.Spotube org.chromium.Chromium || \
         warn "Some flatpak installations failed"
 
-    # Install AUR packages (requires paru)
-    if command -v paru &> /dev/null; then
+    # Install AUR packages
+    if command -v yay &> /dev/null; then
         log "Installing AUR packages..."
-        paru -S --needed --noconfirm \
+        yay -S --needed --noconfirm \
             mullvad-vpn mullvad-vpn-cli burpsuite aquatone-bin || \
             warn "Some AUR packages failed to install"
     else
-        warn "paru not found, skipping AUR packages"
+        warn "yay not found, skipping AUR packages"
     fi
 
     # Go tool installation function
