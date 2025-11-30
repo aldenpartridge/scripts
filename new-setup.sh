@@ -47,7 +47,7 @@ elif [ "$OS" == "arch" ]; then
     # Install core development tools in batch
     log "Installing core development packages..."
     sudo pacman -S --needed --noconfirm \
-        python3 python-pip rust python-pipx python3-setuptools python3-wheels cmake docker docker-compose \
+        python3 python-pip rust python-pipx python-setuptools python-wheels cmake docker docker-compose \
         flatpak wget ripgrep jq nmap btop fzf openbsd-netcat \
         tor yubikey-personalization libfido2 yubikey-manager \
         binwalk findomain radare2 hashcat ghidra go stow \
