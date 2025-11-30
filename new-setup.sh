@@ -70,9 +70,7 @@ elif [ "$OS" == "arch" ]; then
 
     # Setup Python
     log "Setting up Python environment..."
-    python3 -m ensurepip --default-pip || error "Failed to install pip"
     python3 -m pip install --upgrade pip setuptools wheel
-    sudo pacman -S python-pipx --noconfirm
     pipx ensurepath
     sudo pipx ensurepath --global
 
