@@ -54,6 +54,10 @@ elif [ "$OS" == "arch" ]; then
         cronie || \
         error "Failed to install core packages"
 
+    # Download Rust
+    log "Installing Rust..."
+    rustup default stable
+
     # Install Paru AUR helper (prefer official repo, fallback to build)
     log "Installing Paru AUR helper..."
     if pacman -Si paru &>/dev/null; then
@@ -63,7 +67,7 @@ elif [ "$OS" == "arch" ]; then
     else
         # Fallback to building from source in temp directory
         mkdir -p /tmp/paru-build && cd /tmp/paru-build
-        git clone https://aur.archlinux.org/paru.git .
+        git clone https://aur.archlinux.org/paru.git
         makepkg -si --noconfirm && cd ~ && rm -rf /tmp/paru-build || \
             error "Failed to build and install paru"
     fi
