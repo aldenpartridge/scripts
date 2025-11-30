@@ -48,11 +48,25 @@ elif [ "$OS" == "arch" ]; then
     log "Installing core development packages..."
     sudo pacman -S --needed --noconfirm \
         python3 python-pip rust python-pipx python-setuptools cmake docker docker-compose \
-        flatpak wget ripgrep jq nmap btop fzf openbsd-netcat \
+        flatpak wget ripgrep jq nmap btop fzf openbsd-netcat base-devel \
         tor yubikey-personalization libfido2 yubikey-manager \
         binwalk findomain radare2 hashcat ghidra go stow \
         cronie || \
         error "Failed to install core packages"
+
+    # Install Paru AUR helper (prefer official repo, fallback to build)
+    log "Installing Paru AUR helper..."
+    if pacman -Si paru &>/dev/null; then
+        # Try official repository first (newer Arch versions)
+        sudo pacman -S --needed --noconfirm paru || \
+            warn "Failed to install paru from official repo"
+    else
+        # Fallback to building from source in temp directory
+        mkdir -p /tmp/paru-build && cd /tmp/paru-build
+        git clone https://aur.archlinux.org/paru.git .
+        makepkg -si --noconfirm && cd ~ && rm -rf /tmp/paru-build || \
+            error "Failed to build and install paru"
+    fi
 
     # Enable services
     log "Enabling services..."
